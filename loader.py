@@ -69,13 +69,14 @@ class CV5CIFAR10(VisionDataset):
                                ' You can use download=True to download it')
 
 
-        assert current_fold >= 0 and current_fold < 5, "current_fold must be between 0 and 4!"
+        assert current_fold >= -1 and current_fold < 5, "current_fold must be between 0 and 4!"
 
         if self.train:
             downloaded_list = [x for x in self.train_list]
-            downloaded_list.pop(current_fold)
+            if current_fold > -1:
+                downloaded_list.pop(current_fold)
         else:
-            downloaded_list = [self.train_list[current_fold]]
+            downloaded_list = [self.train_list[current_fold]] if current_fold > -1 else self.test_list
 
         self.data: Any = []
         self.targets = []

@@ -29,7 +29,7 @@ if __name__ == '__main__':
     parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
     parser.add_argument('--resume', '-r', action='store_true',
                         help='resume from checkpoint')
-    parser.add_argument('--fold', default=0, type=int, help='current fold [0,5)')
+    parser.add_argument('--fold', default=-1, type=int, help='current fold [0,5)')
     parser.add_argument('--model', default='vgg19', type=str, help='model to use')
     args = parser.parse_args()
 
