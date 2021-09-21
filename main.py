@@ -13,24 +13,20 @@ import argparse
 
 from models import *
 from loader import CV5CIFAR10
-from utils import progress_bar
+from adversarial import AdversarialTransform
+from utils import progress_bar, get_model, TransformParameterWrapper, TransformParameterKeepFirst
 
 
-def get_model(name):
-    if name == "vgg11":
-        return VGG('VGG11')
-    elif name == "vgg16":
-        return VGG('VGG16')
-    elif name == "vgg19":
-        return VGG('VGG19')
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
     parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
     parser.add_argument('--resume', '-r', action='store_true',
                         help='resume from checkpoint')
-    parser.add_argument('--fold', default=-1, type=int, help='current fold [0,5)')
+    parser.add_argument('--fold', default=-1, type=int, help='current fold [-1,5). -1 means no CV')
     parser.add_argument('--model', default='vgg19', type=str, help='model to use')
+    parser.add_argument('--adv', '-a', action='store_true', help='wether to use 2n labeling')
     args = parser.parse_args()
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -39,26 +35,28 @@ if __name__ == '__main__':
 
     # Data
     print('==> Preparing data..')
-    transform_train = transforms.Compose([
-        transforms.RandomCrop(32, padding=4),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-    ])
+    transform_train_list = [
+        TransformParameterWrapper(transforms.RandomCrop(32, padding=4)),
+        TransformParameterWrapper(transforms.RandomHorizontalFlip()),
+        TransformParameterWrapper(transforms.ToTensor()),
+        TransformParameterWrapper(transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))),
+        AdversarialTransform(0, "", ""),
+        TransformParameterKeepFirst()
+    ]
+    
+    transform_train = transforms.Compose(transform_train_list)
 
     transform_test = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
     ])
 
-    """trainset = torchvision.datasets.CIFAR10(
-        root='./data', train=True, download=True, transform=transform_train)"""
+    print("USING FOLD = ", args.fold)
+
     trainset = CV5CIFAR10(root='./data', current_fold=args.fold, train=True, download=True, transform=transform_train)
     trainloader = torch.utils.data.DataLoader(
         trainset, batch_size=128, shuffle=True, num_workers=2)
 
-    """testset = torchvision.datasets.CIFAR10(
-        root='./data', train=False, download=True, transform=transform_test)"""
     testset = CV5CIFAR10(root='./data', current_fold=args.fold, train=False, download=True, transform=transform_test)
     testloader = torch.utils.data.DataLoader(
         testset, batch_size=100, shuffle=False, num_workers=2)
@@ -102,6 +100,8 @@ if __name__ == '__main__':
                         momentum=0.9, weight_decay=5e-4)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
 
+
+    print("USING DEVICE", "cpu" if not torch.cuda.is_available() else torch.cuda.current_device())
 
     # Training
     def train(epoch):

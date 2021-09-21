@@ -122,7 +122,7 @@ class CV5CIFAR10(VisionDataset):
         img = Image.fromarray(img)
 
         if self.transform is not None:
-            img = self.transform(img)
+            img = self.transform((img, target))
 
         if self.target_transform is not None:
             target = self.target_transform(target)

@@ -12,6 +12,35 @@ import torch
 import torch.nn as nn
 import torch.nn.init as init
 
+from models.vgg import VGG
+
+
+def get_model(name):
+    if name == "vgg11":
+        return VGG('VGG11')
+    elif name == "vgg16":
+        return VGG('VGG16')
+    elif name == "vgg19":
+        return VGG('VGG19')
+
+
+class TransformParameterWrapper(nn.Module):
+    """Can be used to pass further information which the current transform does not need"""
+    def __init__(self, transform):
+        super(TransformParameterWrapper, self).__init__()
+        self._transform = transform
+
+    def forward(self, x):
+        return (self._transform(x[0]), *x[1:])
+
+class TransformParameterKeepFirst(nn.Module):
+
+    def __init__(self):
+        super(TransformParameterKeepFirst, self).__init__()
+    
+    def forward(self, x):
+        return x[0]
+
 
 def get_mean_and_std(dataset):
     '''Compute the mean and std value of dataset.'''
