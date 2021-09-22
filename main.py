@@ -47,8 +47,9 @@ if __name__ == '__main__':
     transform_train = transforms.Compose(transform_train_list)
 
     transform_test = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        TransformParameterWrapper(transforms.ToTensor()),
+        TransformParameterWrapper(transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))),
+        TransformParameterKeepFirst()
     ])
 
     print("USING FOLD = ", args.fold)
@@ -82,7 +83,9 @@ if __name__ == '__main__':
     # net = RegNetX_200MF()
     #net = SimpleDLA()
     net = net.to(device)
+
     if device == 'cuda':
+        print("Using parallel")
         net = torch.nn.DataParallel(net)
         cudnn.benchmark = True
 

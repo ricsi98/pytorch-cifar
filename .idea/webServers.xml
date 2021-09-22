@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="d5662e26-9d90-4449-82b3-748c359c4398" name="tmit" url="">
+        <fileTransfer rootFolder="/home/nvidia1/adversarial" accessType="SFTP" host="dc.tmit.bme.hu" port="24722" sshConfigId="d1e24827-140a-4236-800b-1938c900eec2" sshConfig="nvidia1@dc.tmit.bme.hu:24722 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>

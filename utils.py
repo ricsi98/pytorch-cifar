@@ -11,6 +11,7 @@ import torch
 
 import torch.nn as nn
 import torch.nn.init as init
+import torchvision.transforms as transforms
 
 from models.vgg import VGG
 
@@ -42,6 +43,11 @@ class TransformParameterKeepFirst(nn.Module):
         return x[0]
 
 
+PREPROCESS = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+])
+
 def get_mean_and_std(dataset):
     '''Compute the mean and std value of dataset.'''
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True, num_workers=2)
@@ -71,9 +77,15 @@ def init_params(net):
             if m.bias:
                 init.constant(m.bias, 0)
 
+if sys.platform in ['linux1', 'linux2']:
+    _, term_width = os.popen('stty size', 'r').read().split()
+    term_width = int(term_width)
+else:
+    term_width = 10
+
 
 #_, term_width = os.popen('stty size', 'r').read().split()
-term_width = 60 #int(term_width)
+#erm_width = 60 #int(term_width)
 
 TOTAL_BAR_LENGTH = 65.
 last_time = time.time()
