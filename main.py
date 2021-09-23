@@ -155,6 +155,10 @@ if __name__ == '__main__':
             for batch_idx, (inputs, targets) in enumerate(testloader):
                 inputs, targets = inputs.to(device), targets.to(device)
                 outputs = net(inputs)
+
+                if ADV_TRAINING and get_mode(args.nClasses) == "2n":
+                    outputs = torch.remainder(outputs, 10)
+
                 loss = criterion(outputs, targets)
 
                 test_loss += loss.item()
