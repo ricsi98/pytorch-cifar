@@ -49,7 +49,7 @@ class CV5CIFAR10(VisionDataset):
     def __init__(
             self,
             root: str,
-            current_fold: int,
+            current_fold: int = -1,
             train: bool = True,
             transform: Optional[Callable] = None,
             target_transform: Optional[Callable] = None,
@@ -68,8 +68,7 @@ class CV5CIFAR10(VisionDataset):
             raise RuntimeError('Dataset not found or corrupted.' +
                                ' You can use download=True to download it')
 
-
-        assert current_fold >= -1 and current_fold < 5, "current_fold must be between 0 and 4!"
+        assert -1 <= current_fold < 5, "current_fold must be between 0 and 4!"
 
         if self.train:
             downloaded_list = [x for x in self.train_list]

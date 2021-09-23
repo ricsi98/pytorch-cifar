@@ -24,7 +24,14 @@ if __name__ == '__main__':
                         help='resume from checkpoint')
     parser.add_argument('--fold', default=-1, type=int, help='current fold [-1,5). -1 means no CV')
     parser.add_argument('--model', default='vgg19', type=str, help='model to use')
-    parser.add_argument('--adv', '-a', action='store_true', help='wether to use 2n labeling')
+    parser.add_argument('--nClasses', default=10, type=int, help='Number of classes to use')
+    parser.add_argument('--adv', default="", type=str,
+                        help='Path to adversarial model checkpoint, if not given, no adv training will be performed')
+    parser.add_argument('--epsilon', default=0, type=float,
+                        help='FGSM epsilon')
+    parser.add_argument('--advRatio', default=0.5, type=float,
+                        help='Ratio of adversarial examples during training')
+
     args = parser.parse_args()
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -38,9 +45,13 @@ if __name__ == '__main__':
         TransformParameterWrapper(transforms.RandomHorizontalFlip()),
         TransformParameterWrapper(transforms.ToTensor()),
         TransformParameterWrapper(transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))),
-        AdversarialTransform(0, "", ""),
+        AdversarialTransform(args.epsilon, args.adv, "vgg19", args.advRatio, args.mode),
         TransformParameterKeepFirst()
     ]
+
+    transform_train_label = transforms.Compose([
+
+    ])
     
     transform_train = transforms.Compose(transform_train_list)
 

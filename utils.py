@@ -6,7 +6,6 @@
 import os
 import sys
 import time
-import math
 import torch
 
 import torch.nn as nn
@@ -14,6 +13,7 @@ import torch.nn.init as init
 import torchvision.transforms as transforms
 
 from models.vgg import VGG
+from collections import OrderedDict
 
 
 def get_model(name: str, n_classes:int=10):
@@ -25,6 +25,16 @@ def get_model(name: str, n_classes:int=10):
         return VGG('VGG19', n_classes)
 
 
+def match_state_dict_keys(state_dict: OrderedDict):
+    if "module" in list(state_dict.keys())[0][:8]:
+        renamed_data = OrderedDict()
+        for key in state_dict.keys():
+            key_ = key[7:]
+            renamed_data[key_] = state_dict[key]
+        return renamed_data
+    return state_dict
+
+
 class TransformParameterWrapper(nn.Module):
     """Can be used to pass further information which the current transform does not need"""
     def __init__(self, transform):
@@ -33,6 +43,7 @@ class TransformParameterWrapper(nn.Module):
 
     def forward(self, x):
         return (self._transform(x[0]), *x[1:])
+
 
 class TransformParameterKeepFirst(nn.Module):
 
