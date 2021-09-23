@@ -46,6 +46,10 @@ def _get_input_mask(x: int, ratio: float):
     return torch.cat((zeros, ones), dim=0)
 
 
+def _invert_mask(mask):
+    return torch.remainder(mask + torch.ones_like(mask))
+
+
 class AdversarialTransform(nn.Module):
 
     def __init__(self, epsilon: float, checkpoint_path: str, model_type: str,
@@ -101,5 +105,5 @@ class AdversarialLabelTransform(nn.Module):
         if self.mode == '2n':
             return x + mask * 10
         if self.mode == 'null':
-            return x + mask
+            return torch.mul(x, _invert_mask(mask)) + mask * 10
 
