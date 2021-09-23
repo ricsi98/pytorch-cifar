@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 
+import numpy as np
+
 from utils import get_model, match_state_dict_keys
 
 
@@ -58,7 +60,7 @@ class AdversarialTransform(nn.Module):
         assert mode in ['normal', '2n', 'null'], '--mode must be either normal, 2n or null'
         assert 0 <= adv_rate <= 1, '--advRatio must be between 0 and 1'
         # load adversarial model
-        if epsilon > 0:
+        if checkpoint_path:
             self.adv_model = get_model(model_type)
             state_dict = match_state_dict_keys(torch.load(checkpoint_path)['net'])
             self.adv_model.load_state_dict(state_dict)
@@ -73,6 +75,9 @@ class AdversarialTransform(nn.Module):
         self.epsilon = epsilon
         self.crit = nn.CrossEntropyLoss()
 
+    def set_adv_model(self, adv_model):
+        self.adv_model = adv_model
+
     def _mask(self, x):
         if self.__mask is None or self.__mask.shape != x.shape:
             self.__mask = _get_input_mask(x, 1 - self.transform_rate)
@@ -81,7 +86,8 @@ class AdversarialTransform(nn.Module):
     def forward(self, x, y):
         if self.epsilon == 0:
             return x
-        return fgsm(x, y, self.adv_model, self.epsilon, self.crit, self._mask(x))
+        epsilon = np.random.uniform(1.0 / 255, self.epsilon)
+        return fgsm(x, y, self.adv_model, epsilon, self.crit, self._mask(x))
 
 
 class AdversarialLabelTransform(nn.Module):

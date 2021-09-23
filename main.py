@@ -112,8 +112,9 @@ if __name__ == '__main__':
     ADV_TRAINING = args.adv != ""
 
     if ADV_TRAINING:
-        adv_transform_inputs = AdversarialTransform(args.epsilon, args.adv, "vgg19",
+        adv_transform_inputs = AdversarialTransform(args.epsilon, "", "vgg19",
                                                     args.advRatio, get_mode(args.nClasses), device)
+        adv_transform_inputs.set_adv_model(net)
         adv_transform_labels = AdversarialLabelTransform(get_mode(args.nClasses), args.advRatio)
 
     # Training
