@@ -13,8 +13,18 @@ import argparse
 
 from models import *
 from loader import CV5CIFAR10
-from adversarial import AdversarialTransform
+from adversarial import AdversarialTransform, AdversarialLabelTransform
 from utils import progress_bar, get_model, TransformParameterWrapper, TransformParameterKeepFirst
+
+
+def get_mode(n_classes: int):
+    assert n_classes in [10, 11, 20]
+    if n_classes == 10:
+        return "normal"
+    elif n_classes == 11:
+        return "null"
+    elif n_classes == 20:
+        return "2n"
 
 
 if __name__ == '__main__':
@@ -31,41 +41,40 @@ if __name__ == '__main__':
                         help='FGSM epsilon')
     parser.add_argument('--advRatio', default=0.5, type=float,
                         help='Ratio of adversarial examples during training')
+    parser.add_argument('--noGpu', action='store_true', help='Force use cpu')
 
     args = parser.parse_args()
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    if args.noGpu:
+        print("FORCE USING CPU")
+        device = "cpu"
+
     best_acc = 0  # best test accuracy
     start_epoch = 0  # start from epoch 0 or last checkpoint epoch
 
     # Data
     print('==> Preparing data..')
     transform_train_list = [
-        TransformParameterWrapper(transforms.RandomCrop(32, padding=4)),
-        TransformParameterWrapper(transforms.RandomHorizontalFlip()),
-        TransformParameterWrapper(transforms.ToTensor()),
-        TransformParameterWrapper(transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))),
-        AdversarialTransform(args.epsilon, args.adv, "vgg19", args.advRatio, args.mode),
-        TransformParameterKeepFirst()
+        transforms.RandomCrop(32, padding=4),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
     ]
-
-    transform_train_label = transforms.Compose([
-
-    ])
     
     transform_train = transforms.Compose(transform_train_list)
 
     transform_test = transforms.Compose([
-        TransformParameterWrapper(transforms.ToTensor()),
-        TransformParameterWrapper(transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))),
-        TransformParameterKeepFirst()
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
     ])
 
     print("USING FOLD = ", args.fold)
 
-    trainset = CV5CIFAR10(root='./data', current_fold=args.fold, train=True, download=True, transform=transform_train)
+    trainset = CV5CIFAR10(root='./data', current_fold=args.fold, train=True, download=True,
+                          transform=transform_train)
     trainloader = torch.utils.data.DataLoader(
-        trainset, batch_size=128, shuffle=True, num_workers=2)
+        trainset, batch_size=25, shuffle=True, num_workers=2)
 
     testset = CV5CIFAR10(root='./data', current_fold=args.fold, train=False, download=True, transform=transform_test)
     testloader = torch.utils.data.DataLoader(
@@ -76,21 +85,7 @@ if __name__ == '__main__':
 
     # Model
     print('==> Building model..', args.model)
-    net = get_model(args.model) #VGG('VGG11')
-    # net = ResNet18()
-    # net = PreActResNet18()
-    # net = GoogLeNet()
-    # net = DenseNet121()
-    # net = ResNeXt29_2x64d()
-    # net = MobileNet()
-    # net = MobileNetV2()
-    # net = DPN92()
-    # net = ShuffleNetG2()
-    # net = SENet18()
-    # net = ShuffleNetV2(1)
-    # net = EfficientNetB0()
-    # net = RegNetX_200MF()
-    #net = SimpleDLA()
+    net = get_model(args.model, args.nClasses)
     net = net.to(device)
 
     if device == 'cuda':
@@ -112,8 +107,14 @@ if __name__ == '__main__':
                         momentum=0.9, weight_decay=5e-4)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
 
-
     print("USING DEVICE", "cpu" if not torch.cuda.is_available() else torch.cuda.current_device())
+
+    ADV_TRAINING = args.adv != ""
+
+    if ADV_TRAINING:
+        adv_transform_inputs = AdversarialTransform(args.epsilon, args.adv, "vgg19",
+                                                    args.advRatio, get_mode(args.nClasses), device)
+        adv_transform_labels = AdversarialLabelTransform(get_mode(args.nClasses), args.advRatio)
 
     # Training
     def train(epoch):
@@ -125,6 +126,11 @@ if __name__ == '__main__':
         for batch_idx, (inputs, targets) in enumerate(trainloader):
             inputs, targets = inputs.to(device), targets.to(device)
             optimizer.zero_grad()
+
+            if ADV_TRAINING:
+                inputs = adv_transform_inputs(inputs, targets)
+                targets = adv_transform_labels(targets)
+
             outputs = net(inputs)
             loss = criterion(outputs, targets)
             loss.backward()
