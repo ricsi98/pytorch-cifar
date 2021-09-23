@@ -1,11 +1,10 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from utils import get_model, match_state_dict_keys
 
 
-def fgsm(x, y, model, epsilon, crit, mask=None):
+def fgsm(x, y, model, epsilon, crit):
     # fix dimensions if the input is not batched
     remove_dim = False
     if len(x.shape) == 3:
@@ -20,13 +19,9 @@ def fgsm(x, y, model, epsilon, crit, mask=None):
     loss = crit(y_, y)
     loss.backward()
 
-    # apply fgsm
-    if mask is not None:
-        return_tensor = x + epsilon * torch.mul(mask, torch.sign(x_.grad))
-    else:
-        return_tensor = x + epsilon * torch.sign(x_.grad)
-
+    return_tensor = x + epsilon * torch.sign(x_.grad)
     return_tensor = torch.clamp(return_tensor, 0, 1)
+
     # reshape to original form
     if remove_dim:
         return return_tensor[0, :, :, :]
@@ -48,6 +43,18 @@ def _get_input_mask(x: int, ratio: float):
     return torch.cat((zeros, ones), dim=0)
 
 
+class SparseTransformCounter:
+
+    def __init__(self, transform_rate: float):
+        self.transform_rate = transform_rate
+        self.do_transform_modulo = max(2, round(1 / transform_rate))
+        self.nth_transform = 0
+
+    def need_transform(self):
+        self.nth_transform += 1
+        return self.nth_transform % self.do_transform_modulo == 0
+
+
 class AdversarialTransform(nn.Module):
 
     def __init__(self, epsilon: float, checkpoint_path: str, model_type: str,
@@ -64,31 +71,33 @@ class AdversarialTransform(nn.Module):
             self.adv_model = None
 
         self.mode = mode
-        self.adv_rate = adv_rate
         self.epsilon = epsilon
-        self.__mask = None
         self.crit = nn.CrossEntropyLoss()
 
-    def _mask(self, x):
-        if self.adv_rate == 0:
-            return None
-        if self.__mask is None:
-            self.__mask = _get_input_mask(x, 1 - self.adv_rate).to(x.device)
-        return self.__mask
+        self.need_transform = SparseTransformCounter(adv_rate)
 
     def forward(self, data):
-        if self.epsilon == 0:
-            return data
-        x, y = data
-        return fgsm(x, y, self.adv_model, self.epsilon, self.crit, mask=self._mask(x)), y
+        if self.need_transform.need_transform():
+            if self.epsilon == 0:
+                return data
+            x, y = data
+            return fgsm(x, y, self.adv_model, self.epsilon, self.crit), y
+        return data
 
 
 class AdversarialLabelTransform(nn.Module):
 
-    def __init__(self, mode: str):
+    def __init__(self, mode: str, adv_rate: float):
         super(AdversarialLabelTransform, self).__init__()
         assert mode in ['normal', '2n', 'null'], '--mode must be either normal, 2n or null'
         self.mode = mode
+        self.need_transform = SparseTransformCounter(adv_rate)
 
     def forward(self, x):
-        pass
+        if self.need_transform.need_transform():
+            if self.mode is "normal":
+                return x
+            elif self.mode is "2n":
+                return x + 10
+            return x + 1
+        return x
