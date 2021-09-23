@@ -17,8 +17,6 @@ from adversarial import AdversarialTransform
 from utils import progress_bar, get_model, TransformParameterWrapper, TransformParameterKeepFirst
 
 
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
     parser.add_argument('--lr', default=0.1, type=float, help='learning rate')

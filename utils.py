@@ -16,13 +16,13 @@ import torchvision.transforms as transforms
 from models.vgg import VGG
 
 
-def get_model(name):
+def get_model(name: str, n_classes:int=10):
     if name == "vgg11":
-        return VGG('VGG11')
+        return VGG('VGG11', n_classes)
     elif name == "vgg16":
-        return VGG('VGG16')
+        return VGG('VGG16', n_classes)
     elif name == "vgg19":
-        return VGG('VGG19')
+        return VGG('VGG19', n_classes)
 
 
 class TransformParameterWrapper(nn.Module):

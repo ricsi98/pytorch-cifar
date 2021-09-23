@@ -4,6 +4,15 @@ import torch.nn.functional as F
 
 from utils import get_model
 
+
+def fgsm(x, y, model, epsilon, crit):
+    x_ = torch.tensor(x, requires_grad=True)
+    y_ = model(x_)
+    loss = crit(y_, y)
+    loss.backward()
+    return x + epsilon * torch.sign(x_.grad)
+
+
 class AdversarialTransform(nn.Module):
 
     def __init__(self, epsilon: float, checkpoint_path: str, model_type: str):
@@ -18,13 +27,8 @@ class AdversarialTransform(nn.Module):
         self.epsilon = epsilon
         self.crit = nn.CrossEntropyLoss()
 
-
     def forward(self, data):
         if self.epsilon == 0:
             return data
         x, y = data
-        x_ = torch.tensor(x, requires_grad=True)
-        y_ = self.adv_model(x_)
-        loss = self.crit(y_, y)
-        loss.backward()
-        return x + self.epsilon * torch.sign(x_.grad), y
+        return fgsm(x, y, self.adv_model, self.epsilon, self.crit), y
