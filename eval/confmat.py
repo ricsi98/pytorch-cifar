@@ -82,7 +82,7 @@ def main():
         print("DEBUG MODE")
 
     model = load_model(args.model, args.nClasses)
-    adv_model = load_model(args.advModel, args.nClasses) if USE_ADV else None
+    adv_model = load_model(args.advModel, 10) if USE_ADV else None
 
     # load test data
     test_set = CIFAR10(root='./data', train=False, download=True, transform=PREPROCESS)
