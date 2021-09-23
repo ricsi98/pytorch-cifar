@@ -131,6 +131,12 @@ if __name__ == '__main__':
                 inputs = adv_transform_inputs(inputs, targets)
                 targets = adv_transform_labels(targets)
 
+                import matplotlib.pyplot as plt
+                img_grid = torchvision.utils.make_grid(inputs, nrow=5)
+                print(targets)
+                plt.imshow(img_grid.permute(1, 2, 0))
+                plt.show()
+
             outputs = net(inputs)
             loss = criterion(outputs, targets)
             loss.backward()

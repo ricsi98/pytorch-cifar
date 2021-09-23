@@ -47,7 +47,7 @@ def _get_input_mask(x: int, ratio: float):
 
 
 def _invert_mask(mask):
-    return torch.remainder(mask + torch.ones_like(mask))
+    return torch.remainder(mask + torch.ones_like(mask), 2)
 
 
 class AdversarialTransform(nn.Module):
