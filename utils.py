@@ -175,3 +175,21 @@ def format_time(seconds):
     if f == '':
         f = '0ms'
     return f
+
+
+def load_model(path: str, n_classes: int):
+    assert n_classes in [10, 11, 20], "nClasses must be either 10, 11 or 20"
+    model = get_model('vgg19', n_classes)
+    data = torch.load(path)
+
+    if "module" in list(data['net'].keys())[0][:8]:
+        renamed_data = OrderedDict()
+        for key in data['net'].keys():
+            key_ = key[7:]
+            renamed_data[key_] = data['net'][key]
+        state_dict = renamed_data
+    else:
+        state_dict = data
+
+    model.load_state_dict(state_dict)
+    return model
