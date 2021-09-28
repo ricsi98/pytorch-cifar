@@ -61,6 +61,7 @@ class Evaluator:
         self.model = None
         self.model_n_classes = None
         self.adv_model = load_model(adv_model_path, 10)
+        self.adv_model.eval()
         self.adv_model.to(self.device)
 
         self._verbose = verbose
@@ -68,6 +69,7 @@ class Evaluator:
     def load_model(self, path: str, n_classes: int):
         self.model_n_classes = n_classes
         self.model = load_model(path, n_classes)
+        self.model.eval()
         self.model.to(self.device)
 
     def evaluate(self, evaluation_function: EvaluationFunction, epsilon: float):
