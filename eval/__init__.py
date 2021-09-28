@@ -50,21 +50,25 @@ class EvaluationFunction:
 
 class Evaluator:
 
-    def __init__(self, adv_model_path: str, batch_size: int = 64, verbose: bool = False):
+    def __init__(self, adv_model_path: str, batch_size: int = 64, verbose: bool = False, device: str = "cpu"):
         self.dataset = CIFAR10(root='./data', train=False, download=True, transform=PREPROCESS)
         self.loader = DataLoader(self.dataset, batch_size=batch_size, shuffle=False)
 
         self.n_batches = self.dataset.data.shape[0] // batch_size + 1
 
+        self.device = device
+
         self.model = None
         self.model_n_classes = None
         self.adv_model = load_model(adv_model_path, 10)
+        self.adv_model.to(self.device)
 
         self._verbose = verbose
 
     def load_model(self, path: str, n_classes: int):
         self.model_n_classes = n_classes
         self.model = load_model(path, n_classes)
+        self.model.to(self.device)
 
     def evaluate(self, evaluation_function: EvaluationFunction, epsilon: float):
         assert self.model is not None, "you should call load_model first!"
@@ -72,6 +76,8 @@ class Evaluator:
         evaluation_function.register_evaluator(self)
 
         for batch_idx, (inputs, targets) in enumerate(self.loader):
+            inputs, targets = inputs.to(self.device), targets.to(self.device)
+
             x_ = fgsm(inputs, targets, self.adv_model, epsilon, nn.CrossEntropyLoss())
 
             pre_adv_output = None

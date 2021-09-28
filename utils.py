@@ -7,6 +7,7 @@ import os
 import sys
 import time
 import torch
+import warnings
 
 import torch.nn as nn
 import torch.nn.init as init
@@ -182,14 +183,19 @@ def load_model(path: str, n_classes: int):
     model = get_model('vgg19', n_classes)
     data = torch.load(path)
 
-    if "module" in list(data['net'].keys())[0][:8]:
-        renamed_data = OrderedDict()
-        for key in data['net'].keys():
-            key_ = key[7:]
-            renamed_data[key_] = data['net'][key]
-        state_dict = renamed_data
-    else:
-        state_dict = data
+    try:
+        model.load_state_dict(data['net'])
+    except RuntimeError:
+        warnings.warn("Pytorch model state_dict key mismatch!")
+        if "module" in list(data['net'].keys())[0][:8]:
+            renamed_data = OrderedDict()
+            for key in data['net'].keys():
+                key_ = key[7:]
+                renamed_data[key_] = data['net'][key]
+            state_dict = renamed_data
+        else:
+            state_dict = data
 
-    model.load_state_dict(state_dict)
+        model.load_state_dict(state_dict)
+
     return model
