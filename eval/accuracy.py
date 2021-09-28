@@ -1,15 +1,7 @@
+import torch
 import argparse
 
-import torch
-import torch.nn as nn
-
 from . import Evaluator, EvaluationFunction
-
-from utils import load_model, PREPROCESS
-from adversarial import fgsm
-
-from torch.utils.data import DataLoader
-from torchvision.datasets import CIFAR10
 
 
 LOGS = False
@@ -19,12 +11,16 @@ IS_2N = False
 class Accuracy(EvaluationFunction):
 
     def __init__(self):
+        super().__init__()
         self.name = "Accuracy"
         self.correct = 0
         self.all = 0
 
-    def process(self, mdl_output, adv_output, target):
-        y = torch.argmax(mdl_output, dim=1)
+        self.needs_plain_output = False
+        self.needs_plain_adv_output = False
+
+    def process(self, mdl_output, adv_output, plain_output, plain_adv_output, target):
+        y = self._probs_to_labels(mdl_output)
         n_correct = torch.sum((y == target).double()).item()
         self.correct += n_correct
         self.all += target.shape[0]
@@ -40,8 +36,6 @@ def accuracy(model_path, n_classes, adv_model_path, epsilon):
     evaluator = Evaluator(adv_model_path, verbose=LOGS)
     evaluator.load_model(model_path, n_classes)
     return evaluator.evaluate(Accuracy(), epsilon)
-
-
 
 
 def main():

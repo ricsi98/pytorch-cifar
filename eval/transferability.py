@@ -9,44 +9,54 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
 
+from . import Evaluator, EvaluationFunction
+
+
+def succesful_attacks(pre_attack, post_attack, target):
+    pre_correct = (pre_attack == target).double()
+    post_incorrect = (post_attack != target).double()
+    return torch.mul(pre_correct, post_incorrect)
+
+
+class Transferability(EvaluationFunction):
+
+    def __init__(self):
+        super().__init__()
+        self.name = "Transferability"
+        self.successful = 0
+        self.adv_successful = 0
+
+    def process(self, mdl_output, adv_output, plain_output, plain_adv_output, target):
+        y_mdl_plain = self._probs_to_labels(plain_output)
+        y_mdl_attack = self._probs_to_labels(mdl_output)
+        y_adv_plain = torch.argmax(plain_adv_output, dim=1)
+        y_adv_attack = torch.argmax(adv_output, dim=1)
+
+        mdl_successful = succesful_attacks(y_mdl_plain, y_mdl_attack, target)
+        adv_successful = succesful_attacks(y_adv_plain, y_adv_attack, target)
+
+        n_transferred = torch.sum(torch.mul(mdl_successful, adv_successful)).item()
+
+        self.successful += n_transferred
+        self.adv_successful += torch.sum(adv_successful).item()
+
+    def result(self):
+        if self.adv_successful == 0:
+            return 0
+        return self.successful / self.adv_successful
+
+    def peek_result(self):
+        return self.result()
+
 
 LOGS = False
 IS_2N = False
 
 
-def transferability(model, adv_model, epsilon):
-    test_set = CIFAR10(root='./data', train=False, download=True, transform=PREPROCESS)
-    loader = DataLoader(test_set, batch_size=64, shuffle=False)
-
-    all_attacks = 0
-    successful_attacks = 0
-    n_batches = test_set.data.shape[0] // loader.batch_size + 1
-
-    for batch_idx, (inputs, targets) in enumerate(loader):
-        x_ = fgsm(inputs, targets, adv_model, epsilon, nn.CrossEntropyLoss())
-
-        y_adv = torch.argmax(adv_model(x_), dim=1)
-        y_mdl = torch.argmax(model(x_), dim=1)
-
-        if IS_2N:
-            y_mdl = torch.remainder(y_mdl, 10)
-
-        successful_adv = (y_adv != targets).double()
-        successful_mdl = (y_mdl != targets).double()
-
-        successful_transfered = torch.mul(successful_mdl, successful_adv)
-        n_successful_attack = torch.sum(successful_transfered).item()
-        n_attack = torch.sum(successful_adv).item()
-
-        successful_attacks += n_successful_attack
-        all_attacks += n_attack
-
-        if LOGS:
-            print(f"Batch {batch_idx}/{n_batches}, current transferability: {'?' if all_attacks == 0 else round(successful_attacks / all_attacks, 5)}")
-
-    if all_attacks == 0:
-        raise Exception("No attacks were successful")
-    return successful_attacks / all_attacks
+def transferability(model_path, n_classes, adv_model_path, epsilon):
+    evaluator = Evaluator(adv_model_path, verbose=LOGS)
+    evaluator.load_model(model_path, n_classes)
+    return evaluator.evaluate(Transferability(), epsilon)
 
 
 def main():
@@ -58,15 +68,12 @@ def main():
     parser.add_argument("--verbose", "-v", action='store_true')
     args = parser.parse_args()
 
-    model = load_model(args.model, args.nClasses)
-    adv_model = load_model(args.advModel, 10)
-
     global LOGS
     LOGS = args.verbose
     global IS_2N
     IS_2N = args.nClasses == 20
 
-    print("TRANSFERABILITY", transferability(model, adv_model, args.epsilon))
+    print("TRANSFERABILITY", transferability(args.model, args.nClasses, args.advModel, args.epsilon))
 
 
 if __name__ == '__main__':
