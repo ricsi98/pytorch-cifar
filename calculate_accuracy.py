@@ -20,6 +20,7 @@ OUTPUT = {
 for eps in OUTPUT['epsilon']:
     for dir in DIRS:
         for model in os.listdir("./checkpoint/" + dir):
+            print("MODEL", model)
             path = "./checkpoint/" + dir + "/" + model
             name = model.split(".")[0]
             evaluator.load_model(path, get_n_classes(dir))
