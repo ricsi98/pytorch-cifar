@@ -25,7 +25,6 @@ def fgsm(x, y, model, epsilon, crit, mask=None):
         return_tensor = x + epsilon * torch.sign(x_.grad)
     else:
         return_tensor = x + epsilon * torch.mul(torch.sign(x_.grad), mask)
-    return_tensor = torch.clamp(return_tensor, 0, 1)
 
     # reshape to original form
     if remove_dim:

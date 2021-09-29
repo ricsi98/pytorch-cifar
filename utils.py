@@ -181,7 +181,7 @@ def format_time(seconds):
 def load_model(path: str, n_classes: int):
     assert n_classes in [10, 11, 20], "nClasses must be either 10, 11 or 20"
     model = get_model('vgg19', n_classes)
-    data = torch.load(path)
+    data = torch.load(path, map_location=torch.device('cpu'))
 
     try:
         model.load_state_dict(data['net'])
