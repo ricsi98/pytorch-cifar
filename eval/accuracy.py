@@ -21,7 +21,7 @@ class Accuracy(EvaluationFunction):
         self.needs_plain_output = False
         self.needs_plain_adv_output = False
 
-    def process(self, mdl_output, adv_output, plain_output, plain_adv_output, target):
+    def process(self, mdl_output, adv_output, plain_output, plain_adv_output, target, epsilon):
         with torch.no_grad():
             y = self._probs_to_labels(mdl_output)
             n_correct = torch.sum((y == target).double()).item()

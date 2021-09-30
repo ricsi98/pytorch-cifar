@@ -25,7 +25,7 @@ class EvaluationFunction:
         self.evaluator = evaluator
 
     @abstractmethod
-    def process(self, mdl_output, adv_output, plain_output, plain_adv_output, target):
+    def process(self, mdl_output, adv_output, plain_output, plain_adv_output, target, epsilon):
         raise NotImplementedError()
 
     @abstractmethod
@@ -97,8 +97,8 @@ class Evaluator:
                 if evaluation_function.needs_attack_adv_output:
                     post_adv_output = self.adv_model(x_)
 
-            evaluation_function.process(post_mdl_output, post_adv_output,
-                                        pre_mdl_output, pre_adv_output, targets)
+            evaluation_function.process(post_mdl_output, post_adv_output, pre_mdl_output, 
+                                pre_adv_output, targets, epsilon)
 
             if self._verbose:
                 print(

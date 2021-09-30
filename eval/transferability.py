@@ -18,7 +18,7 @@ class Transferability(EvaluationFunction):
         self.successful = 0
         self.adv_successful = 0
 
-    def process(self, mdl_output, adv_output, plain_output, plain_adv_output, target):
+    def process(self, mdl_output, adv_output, plain_output, plain_adv_output, target, epsilon):
         with torch.no_grad():
             y_mdl_plain = self._probs_to_labels(plain_output)
             y_mdl_attack = self._probs_to_labels(mdl_output)
