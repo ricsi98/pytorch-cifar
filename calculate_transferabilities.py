@@ -1,7 +1,10 @@
-from eval.transferability import transferability
-from utils import load_model
 import os
+import json
 import numpy as np
+
+from eval import Evaluator
+from eval.transferability import Transferability
+from utils import load_model
 
 def get_n_classes(dir):
     if dir == "2n": return 20
@@ -15,6 +18,8 @@ OUTPUT = {}
 
 adv_model = load_model("./checkpoint/reference.pth", 10)
 
+evaluator = Evaluator("./checkpoint/reference.pth", batch_size=1000, device="cuda")
+
 for e in epsilons:
     print("EPSILON =", e)
     OUTPUT[e] = {}
@@ -22,13 +27,11 @@ for e in epsilons:
         checkpoints = os.listdir("./checkpoint/" + d)
         for cp_name in checkpoints:
             model_path = "./checkpoint/" + d + "/" + cp_name
-            model = load_model(model_path, get_n_classes(d))
-            tf = transferability(model, adv_model, e)
+            evaluator.load_model(model_path, get_n_classes(d))
+            tf = evaluator.evaluate(Transferability(), e)
             model_name = model_path.split("/")[-1].split(".")[0]
             print(model_name, tf)
             OUTPUT[e][model_name] = tf
-
-import json
 
 with open("results.pickle", "w") as f:
     json.dump(OUTPUT, f)
