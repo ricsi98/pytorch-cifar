@@ -29,7 +29,6 @@ class Accuracy(EvaluationFunction):
             self.all += target.shape[0]
 
     def result(self):
-        print("DEBUG", self.correct, self.all)
         return self.correct / self.all
 
     def peek_result(self):
