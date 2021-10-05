@@ -35,6 +35,39 @@ class Accuracy(EvaluationFunction):
         return self.result()
 
 
+def simple_2n_classifier(y):
+    print(y[0], torch.softmax(y[0], dim=0))
+    return torch.sum(torch.softmax(y[:, 10:], dim=1), dim=1)
+
+
+class BinaryAccuracy(Accuracy):
+
+    def __init__(self, classification_function):
+        super().__init__()
+        self.name = "Binary Accuracy"
+        self.needs_plain_adv_output = False
+        self.needs_attack_adv_output = False
+        self.needs_plain_output = True
+        self.clf = classification_function
+
+    def process(self, mdl_output, adv_output, plain_output, plain_adv_output, target, epsilon):
+        with torch.no_grad():
+            post_y = self.clf(mdl_output)
+            pre_y = self.clf(plain_output)
+            probs = torch.cat((post_y, pre_y), dim=0)
+            y_ = torch.round(probs)
+
+            ones = torch.ones_like(post_y)
+            zeros = torch.zeros_like(pre_y)
+            labels = torch.cat((ones, zeros), dim=0)
+
+            self.all += labels.shape[0]
+            print(probs)
+            self.correct += (y_ == labels).int().sum().item()
+            print(self.all, self.correct)
+
+
+
 def accuracy(model_path, n_classes, adv_model_path, epsilon):
     evaluator = Evaluator(adv_model_path, verbose=LOGS, device=DEVICE, batch_size=BS)
     evaluator.load_model(model_path, n_classes)

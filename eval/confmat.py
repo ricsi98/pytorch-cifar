@@ -10,10 +10,41 @@ from torchvision.datasets import CIFAR10
 from sklearn.metrics import confusion_matrix
 
 import torch.nn as nn
+from eval import EvaluationFunction
 
 
 DEBUG = False
 USE_ADV = False
+
+
+class ConfMat2n(EvaluationFunction):
+
+    def __init__(self):
+        super().__init__()
+        self.name = "2N confusion matrix"
+        self.needs_plain_adv_output = False
+        self.needs_attack_adv_output = False
+        self.labels = []
+        self.labels_ = []
+
+    def process(self, mdl_output, adv_output, plain_output, plain_adv_output, target, epsilon):
+        target_ = target + torch.ones_like(target) * 10
+        y = torch.cat((target, target_), dim=0)
+
+        print(mdl_output[0])
+        pred = torch.argmax(plain_output, dim=1)
+        pred_adv = torch.argmax(mdl_output, dim=1)
+
+        y_ = torch.cat((pred, pred_adv), dim=0)
+
+        self.labels += y.detach().cpu().numpy().tolist()
+        self.labels_ += y_.detach().cpu().numpy().tolist()
+
+    def result(self):
+        return confusion_matrix(self.labels, self.labels_)
+
+    def peek_result(self):
+        return self.result()
 
 
 def eval_model(model, loader, adv_model, epsilon):

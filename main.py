@@ -35,8 +35,7 @@ if __name__ == '__main__':
     parser.add_argument('--fold', default=-1, type=int, help='current fold [-1,5). -1 means no CV')
     parser.add_argument('--model', default='vgg19', type=str, help='model to use')
     parser.add_argument('--nClasses', default=10, type=int, help='Number of classes to use')
-    parser.add_argument('--adv', default="", type=str,
-                        help='Path to adversarial model checkpoint, if not given, no adv training will be performed')
+    parser.add_argument('--adv', action='store_true')
     parser.add_argument('--epsilon', default=0, type=float,
                         help='FGSM epsilon')
     parser.add_argument('--advRatio', default=0.5, type=float,
@@ -74,11 +73,11 @@ if __name__ == '__main__':
     trainset = CV5CIFAR10(root='./data', current_fold=args.fold, train=True, download=True,
                           transform=transform_train)
     trainloader = torch.utils.data.DataLoader(
-        trainset, batch_size=25, shuffle=True, num_workers=2)
+        trainset, batch_size=512, shuffle=True, num_workers=2)
 
     testset = CV5CIFAR10(root='./data', current_fold=args.fold, train=False, download=True, transform=transform_test)
     testloader = torch.utils.data.DataLoader(
-        testset, batch_size=100, shuffle=False, num_workers=2)
+        testset, batch_size=512, shuffle=False, num_workers=2)
 
     classes = ('plane', 'car', 'bird', 'cat', 'deer',
             'dog', 'frog', 'horse', 'ship', 'truck')
@@ -109,10 +108,11 @@ if __name__ == '__main__':
 
     print("USING DEVICE", "cpu" if not torch.cuda.is_available() else torch.cuda.current_device())
 
-    ADV_TRAINING = args.adv != ""
+    ADV_TRAINING = args.adv
 
     if ADV_TRAINING:
-        adv_transform_inputs = AdversarialTransform(args.epsilon, "", "vgg19",
+        print("ADVERSARIAL TRAINING")
+        adv_transform_inputs = AdversarialTransform(args.epsilon, None, "vgg19",
                                                     args.advRatio, get_mode(args.nClasses), device)
         adv_transform_inputs.set_adv_model(net)
         adv_transform_labels = AdversarialLabelTransform(get_mode(args.nClasses), args.advRatio)
@@ -157,7 +157,7 @@ if __name__ == '__main__':
                 inputs, targets = inputs.to(device), targets.to(device)
                 outputs = net(inputs)
 
-                if ADV_TRAINING and get_mode(args.nClasses) == "2n":
+                if ADV_TRAINING and args.nClasses == 20:
                     outputs = torch.remainder(outputs, 10)
 
                 loss = criterion(outputs, targets)
